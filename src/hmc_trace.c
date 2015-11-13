@@ -172,7 +172,26 @@ extern int	hmcsim_trace_stall( 	struct hmcsim_t *hmc,
 					link,
 					slot );
 
-		
+	}else if( type == 5 ){
+
+		/*
+		 * DRE allocation stall
+		 *
+		 */
+
+		fprintf( hmc->tfile,	"HMC_SIM_TRACE : %" PRIu64
+					" : DRE_ALLOCATE_STALL"
+					" : %" PRIu32
+					":%" PRIu32
+					":%" PRIu32
+					":%" PRIu32
+					":%" PRIu32 "\n",
+					hmc->clk,
+					dev,
+					src,
+					dest,
+					link,
+					slot );		
 	}else {
 
 		/* 

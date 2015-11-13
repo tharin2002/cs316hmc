@@ -41,7 +41,8 @@ extern int	hmcsim_util_decode_bank( struct hmcsim_t *hmc,
 extern int	hmcsim_decode_rsp_cmd( 	hmc_response_t rsp_cmd, 
 					uint8_t *cmd );
 
-
+static int dre_id = 0;
+const int DRE_MAX = 4;
 /* ----------------------------------------------------- HMCSIM_PROCESS_RQST */
 /* 
  * HMCSIM_PROCESS_RQST
@@ -154,6 +155,35 @@ extern int	hmcsim_process_rqst( 	struct hmcsim_t *hmc,
 	 *         if no slots available, then this operation must stall
 	 * 
  	 */
+
+	/* First, check if is a DRE setup command.  If it is, allocate one DRE.
+		If none are available, stall.
+	 */
+	
+	if (cmd == 0x37) {
+		if (dre_id < DRE_MAX) { ++dre_id; }
+		else {
+			queue->valid = HMC_RQST_STALLED;
+			if( (hmc->tracelevel & HMC_TRACE_STALL) > 0 ){
+				hmcsim_trace_stall(	hmc,
+							dev,
+							0,
+							0,
+							0,
+							0,
+							0,
+							slot,
+							1 );
+			}
+		}
+	}
+
+	/* If this is a DRE release command, free up one DRE. */
+
+	if (cmd == 0x3B) { 
+		--dre_id; 
+		if (dre_id < 0) { dre_id = 0; }
+	}
 
 	/* -- find a response slot */
 	cur = hmc->queue_depth-1;
@@ -1061,6 +1091,78 @@ extern int	hmcsim_process_rqst( 	struct hmcsim_t *hmc,
 			/* signal no response packet required */
 			no_response = 1;
 
+			break;	
+		case 0x38:
+			/* DRE_SETUP */
+
+			if( (hmc->tracelevel & HMC_TRACE_CMD) > 0 ){
+				hmcsim_trace_rqst(	hmc,
+							"DRE_SETUP",
+							dev,
+							0,
+							0,
+							0,
+							0,
+							length );
+			}
+
+			rsp_cmd = MD_RD_RS;
+			rsp_len = 2;
+
+			break;
+		case 0x39:
+			/* DRE_FILL */
+
+			if( (hmc->tracelevel & HMC_TRACE_CMD) > 0 ){
+				hmcsim_trace_rqst(	hmc,
+							"DRE_FILL",
+							dev,
+							0,
+							0,
+							0,
+							0,
+							length );
+			}
+
+			rsp_cmd = MD_RD_RS;
+			rsp_len = 2;
+			
+			break;
+		case 0x3A:
+			/* DRE_DRAIN */
+
+			if( (hmc->tracelevel & HMC_TRACE_CMD) > 0 ){
+				hmcsim_trace_rqst(	hmc,
+							"DRE_DRAIN",
+							dev,
+							0,
+							0,
+							0,
+							0,
+							length );
+			}
+
+			rsp_cmd = MD_RD_RS;
+			rsp_len = 2;
+			
+			break;
+		case 0x3B:
+			/* DRE_RELEASE */
+
+			if( (hmc->tracelevel & HMC_TRACE_CMD) > 0 ){
+				hmcsim_trace_rqst(	hmc,
+							"DRE_RELEASE",
+							dev,
+							0,
+							0,
+							0,
+							0,
+							length );
+			}
+
+			rsp_cmd = MD_RD_RS;
+			rsp_len = 2;
+			
 			break;
 		default:
 			break;
