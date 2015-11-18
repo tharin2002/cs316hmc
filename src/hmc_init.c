@@ -156,6 +156,8 @@ extern int hmcsim_init(	struct hmcsim_t *hmc,
 	hmc->__ptr_xbar_rsp		= NULL;
 	hmc->__ptr_vault_rqst		= NULL;
 	hmc->__ptr_vault_rsp		= NULL;
+	hmc->__ptr_dre_rqst		= NULL;
+	hmc->__ptr_dre_rsp		= NULL;
 
 	/* 
 	 * 
