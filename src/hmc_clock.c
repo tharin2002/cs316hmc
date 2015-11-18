@@ -276,6 +276,7 @@ static int hmcsim_clock_process_rqst_queue( 	struct hmcsim_t *hmc,
 	uint64_t header	= 0x00ll;
 	uint64_t tail	= 0x00ll;
 	uint64_t addr	= 0x00ll;
+	uint32_t cmd	= 0x00;
 	/* ---- */
 
 	/* 
@@ -310,6 +311,8 @@ static int hmcsim_clock_process_rqst_queue( 	struct hmcsim_t *hmc,
 			header	= hmc->devs[dev].xbar[link].xbar_rqst[i].packet[0];
 
 			addr	= ((header >> 24) & 0x3FFFFFFFF);
+
+			cmd	= (uint32_t)(header & 0x3F);
 
 			/* 
 			 * Step 2: Get the CUB.  
@@ -351,111 +354,126 @@ static int hmcsim_clock_process_rqst_queue( 	struct hmcsim_t *hmc,
 				 * local request
 				 *
 				 */
-				
-				/* 
-				 * 7a: Retrieve the vault id
-				 * 
-				 */
-				hmcsim_util_decode_vault( hmc, 
-							dev, 
-							bsize, 
-							addr, 
-							&t_vault );
 
-				/* 
-				 * 8a: Retrieve the quad id 
-				 * 
+				/*
+				 * If this is a DRE command, reroute to an available DRE queue
+				 *
 				 */
-				hmcsim_util_decode_quad( hmc, 
-							dev, 
-							bsize, 
-							addr, 
-							&t_quad );
-					
-			
-				/* 
-				 * if quad is not directly attached
-				 * to my link, print a trace message
-				 * indicating higher latency
-				 */
-				if( link != t_quad ){ 
+
+				if( cmd >= 56 && cmd <= 59) {
+					/* Search DRE queue for a valid slot */
+
+					/* Stall if no slot found */
+
+					/* Allocate DRE and transfer packet there */
+
+				} else {
+
 					/* 
-					 * higher latency 
-					 *
-					 */
-
-					if( (hmc->tracelevel & HMC_TRACE_LATENCY) > 0 ){ 
-						hmcsim_trace_latency( hmc, 
-									dev, 
-									link, 
-									i,
-									t_quad, 
-									t_vault );
-					}
-				}
-	
-				/* 
-				 * 9a: Search the vault queue for valid slot
-				 *     Search bottom-up
-				 * 
-				 */
-				t_slot = hmc->queue_depth+1;
-				cur    = hmc->queue_depth-1;
-		
-				for( j=0; j<hmc->queue_depth; j++ ){	
-					
-					if( hmc->devs[dev].quads[t_quad].vaults[t_vault].rqst_queue[cur].valid == HMC_RQST_INVALID ){
-						t_slot = cur;	
-					}
-					
-					cur--;
-				}
-
-				if( t_slot == hmc->queue_depth+1 ){ 
-
-
-#ifdef HMC_DEBUG
-					HMCSIM_PRINT_INT_TRACE( "STALLED REQUEST AT SLOT", (int)(i) );
-#endif
-				
-					/* STALL */
-					hmc->devs[dev].xbar[link].xbar_rqst[i].valid = HMC_RQST_STALLED;
-					
-					/* 
-					 * print a stall trace 
-					 *
-					 */
-					if ((hmc->tracelevel & HMC_TRACE_STALL) >0 ) {
-						hmcsim_trace_stall(	hmc, 
-									dev, 
-									t_quad,
-									t_vault, 
-									0,
-									0,
-									0,
-									i, 
-									0 ); 
-					}
-		
-					success = 0;	
-				}else {
-
-#ifdef HMC_DEBUG
-					HMCSIM_PRINT_INT_TRACE( "TRANSFERRING PACKET FROM SLOT", (int)(i) );
-					HMCSIM_PRINT_INT_TRACE( "TRANSFERRING PACKET TO SLOT", (int)(t_slot) );
-#endif
-					/*
-					 * push it into the designated queue slot
+					 * 7a: Retrieve the vault id
 					 * 
 					 */
-					hmc->devs[dev].quads[t_quad].vaults[t_vault].rqst_queue[t_slot].valid = HMC_RQST_VALID;
-					for( j=0; j<HMC_MAX_UQ_PACKET; j++ ){ 
-						hmc->devs[dev].quads[t_quad].vaults[t_vault].rqst_queue[t_slot].packet[j] = 
-							hmc->devs[dev].xbar[link].xbar_rqst[i].packet[j];
-					}
-				
-					success = 1;
+					hmcsim_util_decode_vault( hmc, 
+								dev, 
+								bsize, 
+								addr, 
+								&t_vault );
 
+					/* 
+					 * 8a: Retrieve the quad id 
+					 * 
+					 */
+					hmcsim_util_decode_quad( hmc, 
+								dev, 
+								bsize, 
+								addr, 
+								&t_quad );
+						
+				
+					/* 
+					 * if quad is not directly attached
+					 * to my link, print a trace message
+					 * indicating higher latency
+					 */
+					if( link != t_quad ){ 
+						/* 
+						 * higher latency 
+						 *
+						 */
+
+						if( (hmc->tracelevel & HMC_TRACE_LATENCY) > 0 ){ 
+							hmcsim_trace_latency( hmc, 
+										dev, 
+										link, 
+										i,
+										t_quad, 
+										t_vault );
+						}
+					}
+		
+					/* 
+					 * 9a: Search the vault queue for valid slot
+					 *     Search bottom-up
+					 * 
+					 */
+					t_slot = hmc->queue_depth+1;
+					cur    = hmc->queue_depth-1;
+			
+					for( j=0; j<hmc->queue_depth; j++ ){	
+						
+						if( hmc->devs[dev].quads[t_quad].vaults[t_vault].rqst_queue[cur].valid == HMC_RQST_INVALID ){
+							t_slot = cur;	
+						}
+						
+						cur--;
+					}
+
+					if( t_slot == hmc->queue_depth+1 ){ 
+
+
+	#ifdef HMC_DEBUG
+						HMCSIM_PRINT_INT_TRACE( "STALLED REQUEST AT SLOT", (int)(i) );
+	#endif
+					
+						/* STALL */
+						hmc->devs[dev].xbar[link].xbar_rqst[i].valid = HMC_RQST_STALLED;
+						
+						/* 
+						 * print a stall trace 
+						 *
+						 */
+						if ((hmc->tracelevel & HMC_TRACE_STALL) >0 ) {
+							hmcsim_trace_stall(	hmc, 
+										dev, 
+										t_quad,
+										t_vault, 
+										0,
+										0,
+										0,
+										i, 
+										0 ); 
+						}
+			
+						success = 0;	
+					}else {
+
+	#ifdef HMC_DEBUG
+						HMCSIM_PRINT_INT_TRACE( "TRANSFERRING PACKET FROM SLOT", (int)(i) );
+						HMCSIM_PRINT_INT_TRACE( "TRANSFERRING PACKET TO SLOT", (int)(t_slot) );
+	#endif
+						/*
+						 * push it into the designated queue slot
+						 * 
+						 */
+						hmc->devs[dev].quads[t_quad].vaults[t_vault].rqst_queue[t_slot].valid = HMC_RQST_VALID;
+						for( j=0; j<HMC_MAX_UQ_PACKET; j++ ){ 
+							hmc->devs[dev].quads[t_quad].vaults[t_vault].rqst_queue[t_slot].packet[j] = 
+								hmc->devs[dev].xbar[link].xbar_rqst[i].packet[j];
+						}
+					
+						success = 1;
+
+					}
 				}
 
 			}else{
