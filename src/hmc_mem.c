@@ -126,6 +126,14 @@ extern int	hmcsim_allocate_memory( struct hmcsim_t *hmc )
 		return -1;
 	}
 
+	hmc->__ptr_dres = malloc( sizeof( struct hmc_dre_t ) * hmc->num_devs * hmc->num_dres );
+	if( hmc->__ptr_dres == NULL ){ 
+#ifdef HMC_DEBUG
+                HMCSIM_PRINT_TRACE( "FAILED TO ALLOCATE __ptr_dres" );
+#endif
+		return -1;
+	}	
+
 	hmc->__ptr_banks = malloc( sizeof( struct hmc_bank_t ) 
 					* hmc->num_devs * hmc->num_vaults * hmc->num_banks );
 	if( hmc->__ptr_banks == NULL ){

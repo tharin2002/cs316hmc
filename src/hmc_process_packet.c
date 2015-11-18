@@ -41,7 +41,7 @@ extern int	hmcsim_util_decode_bank( struct hmcsim_t *hmc,
 extern int	hmcsim_decode_rsp_cmd( 	hmc_response_t rsp_cmd, 
 					uint8_t *cmd );
 
-static int dre_id = 0;
+extern int dre_id;
 const int DRE_MAX = 4;
 /* ----------------------------------------------------- HMCSIM_PROCESS_RQST */
 /* 
@@ -161,7 +161,10 @@ extern int	hmcsim_process_rqst( 	struct hmcsim_t *hmc,
 	 */
 	
 	if (cmd == 0x37) {
-		if (dre_id < DRE_MAX) { ++dre_id; }
+		if (dre_id < DRE_MAX) { 
+			++dre_id; 
+			HMCSIM_PRINT_INT_TRACE( "DRE Increased: ", (int)(DRE_MAX) );
+		}
 		else {
 			queue->valid = HMC_RQST_STALLED;
 			if( (hmc->tracelevel & HMC_TRACE_STALL) > 0 ){
@@ -184,6 +187,8 @@ extern int	hmcsim_process_rqst( 	struct hmcsim_t *hmc,
 		--dre_id; 
 		if (dre_id < 0) { dre_id = 0; }
 	}
+	
+	HMCSIM_PRINT_INT_TRACE( "DRE_ID: ", (int)(dre_id) );
 
 	/* -- find a response slot */
 	cur = hmc->queue_depth-1;

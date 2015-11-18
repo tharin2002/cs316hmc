@@ -21,6 +21,7 @@ extern int	hmcsim_free_memory( struct hmcsim_t *hmc );
 extern int	hmcsim_config_devices( struct hmcsim_t *sim );
 extern int	hmc_reset_device( struct hmcsim_t *hmc, uint32_t dev );
 
+int dre_id = 0;
 
 /* ----------------------------------------------------- HMCSIM_INIT */
 /* 
@@ -35,7 +36,8 @@ extern int hmcsim_init(	struct hmcsim_t *hmc,
 			uint32_t num_banks, 
 			uint32_t num_drams, 
 			uint32_t capacity, 
-			uint32_t xbar_depth )
+			uint32_t xbar_depth,
+			uint32_t num_dres )
 {
 	/* vars */
 	uint32_t i	= 0;
@@ -125,6 +127,7 @@ extern int hmcsim_init(	struct hmcsim_t *hmc,
 	hmc->num_vaults	= num_vaults;
 	hmc->num_banks	= num_banks;
 	hmc->num_drams	= num_drams;
+	hmc->num_dres	= num_dres;
 	hmc->capacity	= capacity;
 	hmc->queue_depth= queue_depth;
 	hmc->xbar_depth	= xbar_depth;
@@ -143,6 +146,7 @@ extern int hmcsim_init(	struct hmcsim_t *hmc,
 	hmc->__ptr_devs			= NULL;
 	hmc->__ptr_quads		= NULL;
 	hmc->__ptr_vaults		= NULL;
+	hmc->__ptr_dres			= NULL;
 	hmc->__ptr_banks		= NULL;
 	hmc->__ptr_drams		= NULL;
 	hmc->__ptr_links		= NULL;

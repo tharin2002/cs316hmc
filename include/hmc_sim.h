@@ -17,8 +17,9 @@
 	memory addressing, connectivity and general simulation archictecture. 
 */
 
-
-
+/*#ifndef HMC_DEBUG
+#define HMC_DEBUG
+#endif*/
 
 #ifndef _HMC_SIM_H_
 #define _HMC_SIM_H_
@@ -66,7 +67,8 @@ extern int	hmcsim_init(	struct hmcsim_t *hmc,
 				uint32_t num_banks, 
 				uint32_t num_drams, 
 				uint32_t capacity, 
-				uint32_t xbar_depth );
+				uint32_t xbar_depth,
+				uint32_t num_dres );
 
 /*!	\fn int hmcsim_free( struct hmcsim_t *hmc )
 	\brief Frees all the internal memory structures associated with the target configuration. 
