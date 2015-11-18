@@ -1,0 +1,7 @@
+Finalize structure of DREs to account for allocation with SETUP/RELEASE as well as provide queuing for DRAIN/FILL commands.  How big should the queue be? (2-10 is probably sufficient).  How to handle allocation?
+
+Implement logic in hmc_clock.c to either stall DRE commands in the xlink queue or send them to a DRE.  Logic already in place to prevent them from being routed to a vault queue.
+
+Can generate responses for SETUP/RELEASE in the xbar?
+
+Implement routing of DRAIN/FILL memory accesses back through the xbar to be fulfilled by vault queues.  Need to make sure responses don't flow back to host, but instead back to DRE so that when all accesses are complete a host response can be generated.  Can spoof a link for this (-1)?  Might throw a sanity check somewhere, can check.
