@@ -155,38 +155,6 @@ extern int	hmcsim_process_rqst( 	struct hmcsim_t *hmc,
 	 *         if no slots available, then this operation must stall
 	 * 
  	 */
-
-	/* First, check if is a DRE setup command.  If it is, allocate one DRE.
-		If none are available, stall.
-	 */
-	
-	if (cmd == 0x37) {
-		if (dre_id < DRE_MAX) { 
-			++dre_id; 
-			HMCSIM_PRINT_INT_TRACE( "DRE Increased: ", (int)(DRE_MAX) );
-		}
-		else {
-			queue->valid = HMC_RQST_STALLED;
-			if( (hmc->tracelevel & HMC_TRACE_STALL) > 0 ){
-				hmcsim_trace_stall(	hmc,
-							dev,
-							0,
-							0,
-							0,
-							0,
-							0,
-							slot,
-							1 );
-			}
-		}
-	}
-
-	/* If this is a DRE release command, free up one DRE. */
-
-	if (cmd == 0x3B) { 
-		--dre_id; 
-		if (dre_id < 0) { dre_id = 0; }
-	}
 	
 	HMCSIM_PRINT_INT_TRACE( "DRE_ID: ", (int)(dre_id) );
 
