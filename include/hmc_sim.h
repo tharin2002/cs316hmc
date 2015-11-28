@@ -68,6 +68,7 @@ extern int	hmcsim_init(	struct hmcsim_t *hmc,
 				uint32_t num_drams, 
 				uint32_t capacity, 
 				uint32_t xbar_depth,
+				uint32_t dre_depth,
 				uint32_t num_dres );
 
 /*!	\fn int hmcsim_free( struct hmcsim_t *hmc )

@@ -311,12 +311,16 @@ extern int	hmcsim_config_devices( struct hmcsim_t *hmc )
 	uint32_t x		= 0;
 	uint32_t y		= 0;
 	uint32_t a		= 0;
+	uint32_t d 		= 0;
+	uint32_t b      = 0;
 	uint32_t cur_quad	= 0;
 	uint32_t cur_vault	= 0;
 	uint32_t cur_bank	= 0;
 	uint32_t cur_dram	= 0;
 	uint32_t cur_link	= 0;
+	uint32_t cur_dre	= 0;
 	uint32_t cur_queue	= 0;
+	uint32_t cur_dreQueue = 0;
 	uint32_t cur_xbar	= 0;
 	/* ---- */
 
@@ -364,6 +368,26 @@ extern int	hmcsim_config_devices( struct hmcsim_t *hmc )
 		 * 
 		 */
 		hmcsim_config_dev_reg( hmc, i );
+
+		/* 
+		 * dres on each device
+		 *
+		 */
+		hmc->devs[i].dres	= &(hmc->__ptr_dres[cur_dre]);
+		for ( d = 0; d < hmc->num_dres; d++ ) {
+			hmc->devs[i].dres[d].id = d;
+			hmc->devs[i].dres[d].rqst_queue = &(hmc->__ptr_dre_rqst[cur_dreQueue]);
+			hmc->devs[i].dres[d].rsp_queue  = &(hmc->__ptr_dre_rsp[cur_dreQueue]);
+			for( b=0; b<hmc->dre_depth; b++){ 
+				hmc->devs[i].dres[d].rqst_queue[b].valid	= HMC_RQST_INVALID;
+				hmc->devs[i].dres[d].rsp_queue[b].valid	= HMC_RQST_INVALID;
+			}
+
+			cur_dreQueue += hmc->dre_depth;
+			// TO DO for Zelin: add and initialize more DRE registers
+			// haven't consider any DRE related queues yet
+		}
+		cur_dre  += hmc->num_dres;
 
 		/* 
 		 * links on each device

@@ -37,6 +37,7 @@ extern int hmcsim_init(	struct hmcsim_t *hmc,
 			uint32_t num_drams, 
 			uint32_t capacity, 
 			uint32_t xbar_depth,
+			uint32_t dre_depth,
 			uint32_t num_dres )
 {
 	/* vars */
@@ -131,6 +132,7 @@ extern int hmcsim_init(	struct hmcsim_t *hmc,
 	hmc->capacity	= capacity;
 	hmc->queue_depth= queue_depth;
 	hmc->xbar_depth	= xbar_depth;
+	hmc->dre_depth = dre_depth;
 
 	hmc->clk	= 0x00ll;
 

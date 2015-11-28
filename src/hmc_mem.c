@@ -216,7 +216,7 @@ extern int	hmcsim_allocate_memory( struct hmcsim_t *hmc )
 		return -1;
 	}
 
-	hmc->__ptr_dre_rqst = malloc( sizeof( struct hmc_queue_t ) * hmc->num_devs * hmc->num_dres * 1);
+	hmc->__ptr_dre_rqst = malloc( sizeof( struct hmc_queue_t ) * hmc->num_devs * hmc->num_dres * hmc->dre_depth);
 	if( hmc->__ptr_dre_rqst == NULL ){
 #ifdef HMC_DEBUG
                 HMCSIM_PRINT_TRACE( "FAILED TO ALLOCATE __ptr_dre_rqst" );
@@ -224,7 +224,7 @@ extern int	hmcsim_allocate_memory( struct hmcsim_t *hmc )
 		return -1;
 	}
 
-	hmc->__ptr_dre_rsp = malloc( sizeof( struct hmc_queue_t ) * hmc->num_devs * hmc->num_dres * 1 );
+	hmc->__ptr_dre_rsp = malloc( sizeof( struct hmc_queue_t ) * hmc->num_devs * hmc->num_dres * hmc->dre_depth);
 	if( hmc->__ptr_dre_rsp == NULL ){
 #ifdef HMC_DEBUG
                 HMCSIM_PRINT_TRACE( "FAILED TO ALLOCATE __ptr_dre_rsp" );

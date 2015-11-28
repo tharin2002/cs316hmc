@@ -168,6 +168,8 @@ struct hmc_dev_t{
 	uint32_t id;				/*! HMC-SIM: HMC_DEV_T: CUBE ID */
 
 	uint8_t seq;				/*! HMC-SIM: HMC_DEV_T: SEQUENCE NUMBER */
+
+	struct hmc_dre_t *dres;
 };
 
 struct hmcsim_t{
@@ -185,6 +187,7 @@ struct hmcsim_t{
 
 	uint32_t queue_depth;		/*! HMC-SIM: HMCSIM_T: VAULT QUEUE DEPTH */
 	uint32_t xbar_depth;		/*! HMC-SIM: HMCSIM_T: VAULT QUEUE DEPTH */
+	uint32_t dre_depth;
 
 	FILE *tfile;			/*! HMC-SIM: HMCSIM_T: TRACE FILE HANDLER */
 	uint32_t tracelevel;		/*! HMC-SIM: HMCSIM_T: TRACE LEVEL */

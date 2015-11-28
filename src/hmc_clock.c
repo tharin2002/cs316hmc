@@ -262,12 +262,16 @@ static int hmcsim_clock_process_rqst_queue( 	struct hmcsim_t *hmc,
 	/* vars */
 	uint32_t i	= 0;
 	uint32_t j	= 0;
+	uint32_t k  = 0;
 	uint32_t cur	= 0;
+	uint32_t cur_slot	= 0;
+	uint32_t cur_dre	= 0;
 	uint32_t found	= 0;
 	uint32_t success= 0;
 	uint32_t len	= 0;
 	uint32_t t_link	= 0;
 	uint32_t t_slot	= 0;
+	uint32_t t_dre  = 0;
 	uint32_t t_quad = 0;
 	uint32_t bsize	= 0;
 	uint32_t t_vault= hmc->queue_depth+1;
@@ -366,6 +370,71 @@ static int hmcsim_clock_process_rqst_queue( 	struct hmcsim_t *hmc,
 					/* Stall if no slot found */
 
 					/* Allocate DRE and transfer packet there */
+
+					/* setup implementation */
+					if (cmd == 56) { //setup
+						t_dre		= hmc->num_dres + 1;
+						t_slot 		= hmc->dre_depth + 1;
+						cur_dre		= hmc->num_dres - 1;
+						cur_slot	= hmc->dre_depth - 1;
+						
+						for (j=0; j<hmc->dre_depth; j++) {
+							for (k=0; k<hmc->num_dres; k++) {
+								if (hmc->devs[dev].dres[cur_dre].rqst_queue[cur_slot].valid == HMC_RQST_INVALID) {
+									t_dre = cur_dre;
+									t_slot = cur_slot;
+								}
+								cur_dre--;
+							}
+							cur_slot--;
+						}
+
+						if (t_dre == hmc->num_dres + 1 && t_slot == hmc->dre_depth + 1) {
+	#ifdef HMC_DEBUG
+							HMCSIM_PRINT_INT_TRACE( "STALLED DRE REQUEST AT SLOT", (int)(i) );
+	#endif
+					
+							/* STALL */
+							hmc->devs[dev].xbar[link].xbar_rqst[i].valid = HMC_RQST_STALLED;
+						
+							/* 
+						 	* print a stall trace 
+						 	*
+						 	*/
+/*							if ((hmc->tracelevel & HMC_TRACE_STALL) >0 ) {
+								hmcsim_trace_stall(	hmc, 
+											dev, 
+											t_quad,
+											t_vault, 
+											0,
+											0,
+											0,
+											i, 
+											0 ); 
+							}*/
+			
+							success = 0;	
+						}else {
+
+	#ifdef HMC_DEBUG
+							HMCSIM_PRINT_INT_TRACE( "TRANSFERRING PACKET FROM SLOT", (int)(i) );
+							HMCSIM_PRINT_INT_TRACE( "TRANSFERRING PACKET TO SLOT", (int)(t_slot) );
+							HMCSIM_PRINT_INT_TRACE( "TRANSFERRING PACKET TO DRE", (int)(t_dre) );
+	#endif
+							/*
+							 * push it into the designated queue slot
+							 * 
+							 */
+							hmc->devs[dev].dres[t_dre].rqst_queue[t_slot].valid = HMC_RQST_VALID;
+							for( j=0; j<HMC_MAX_UQ_PACKET; j++ ){ 
+								hmc->devs[dev].dres[t_dre].rqst_queue[t_slot].packet[j] = 
+									hmc->devs[dev].xbar[link].xbar_rqst[i].packet[j];
+							}
+						
+							success = 1;
+
+						}
+					}
 
 				} else {
 
