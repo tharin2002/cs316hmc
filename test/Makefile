@@ -5,7 +5,8 @@
 # Drives building all the hmcsim tests
 
 
-SUBDIRS :=	simple hmc_physrand decode_physrand 1dfft 2dfft stream
+#SUBDIRS :=	simple hmc_physrand decode_physrand 1dfft 2dfft stream
+SUBDIRS :=	dre_test
 
 CLEANDIRS :=	$(addsuffix .clean, $(SUBDIRS))
 
