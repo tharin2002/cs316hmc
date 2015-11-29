@@ -1094,6 +1094,7 @@ static int hmcsim_clock_reg_responses( struct hmcsim_t *hmc )
 	uint32_t y		= 0;
 	uint32_t r_link		= 0;
 	uint32_t r_slot		= hmc->xbar_depth+1;
+	int64_t header	= 0x00ll;
 	struct hmc_queue_t *lq	= NULL;
 	/* ---- */
 
@@ -1132,71 +1133,118 @@ static int hmcsim_clock_reg_responses( struct hmcsim_t *hmc )
 									x, 
 									&r_link );
 
-						/* 
-						 * determine if the response
-						 * xbar queue has an empty slot
-						 * 
-						 */
-						cur = hmc->xbar_depth-1;
-						for( y=0; y<hmc->xbar_depth; y++ ){	
-							if( hmc->devs[i].xbar[r_link].xbar_rsp[cur].valid == 
-									HMC_RQST_INVALID ){
-								/* empty queue slot */
-								r_slot = cur;
-							}
-							cur--;
-						}
+						/* If bit 38 is high, this is an internal DRE response and the SLID is the DRE ID */
 
-						/* 
-						 * if we found a good slot, insert it
-						 * and zero the vault response slot
-						 *
-						 */
-						if( r_slot != (hmc->xbar_depth+1) ){
-
-							/*
-							 * slot found!
-							 * transfer the data
-							 *
-							 */
-							hmc->devs[i].xbar[r_link].xbar_rsp[r_slot].valid = 
-									HMC_RQST_VALID;
-							for( y=0; y<HMC_MAX_UQ_PACKET; y++){ 
-								hmc->devs[i].xbar[r_link].xbar_rsp[r_slot].packet[y] = 
-										lq[x].packet[y];
-								lq[x].packet[y]	= 0x00ll;
+						header 	= lq[x].packet[0];
+						if ( ((uint32_t)((header>>38) & 0x1)) == 1) {
+							cur = hmc->dre_depth-1;
+							for ( y=0; y<hmc->dre_depth; y++ ) {
+								if ( hmc->devs[i].dres[r_link].rsp_queue[cur].valid == HMC_RQST_INVALID ) {
+									r_slot = cur;
+								}
+								cur --;
 							}
+
+							if ( r_slot != (hmc->dre_depth+1) ) {
+								hmc->devs[i].dres[r_link].rsp_queue[r_slot].valid =
+										HMC_RQST_VALID;
+								for ( y=0; y<HMC_MAX_UQ_PACKET; y++ ) {
+									hmc->devs[i].dres[r_link].rsp_queue[r_slot].packet[y] =
+											lq[x].packet[y];
+									lq[x].packet[y] = 0x00ll;
+								}
+
+								lq[x].valid = HMC_RQST_INVALID;
+							} else {
+								lq[x].valid = HMC_RQST_STALLED;
+
+								if( (hmc->tracelevel & HMC_TRACE_STALL)>0 ){
+								
+									/*
+									 * print a trace signal 
+									 *
+									 */
+									hmcsim_trace_stall( hmc, 
+											i, 
+											j, 
+											k,
+											0,
+											0,
+											0, 
+											x, 
+											2 );
+								}
+							}
+
+
+						} else {
 
 							/* 
-							 * clear the source slot
+							 * determine if the response
+							 * xbar queue has an empty slot
 							 * 
 							 */
-							lq[x].valid = HMC_RQST_INVALID;
-
-						}else{
+							cur = hmc->xbar_depth-1;
+							for( y=0; y<hmc->xbar_depth; y++ ){	
+								if( hmc->devs[i].xbar[r_link].xbar_rsp[cur].valid == 
+										HMC_RQST_INVALID ){
+									/* empty queue slot */
+									r_slot = cur;
+								}
+								cur--;
+							}
 
 							/* 
-							 * STALL! 
+							 * if we found a good slot, insert it
+							 * and zero the vault response slot
 							 *
 							 */
+							if( r_slot != (hmc->xbar_depth+1) ){
 
-							lq[x].valid = HMC_RQST_STALLED;
-
-							if( (hmc->tracelevel & HMC_TRACE_STALL)>0 ){
-							
 								/*
-								 * print a trace signal 
+								 * slot found!
+								 * transfer the data
 								 *
 								 */
-								hmcsim_trace_stall( hmc, 
-										i, 
-										j, 
-										k,
-										0,
-										0,
-										0, 
-										x, 
-										2 );
+								hmc->devs[i].xbar[r_link].xbar_rsp[r_slot].valid = 
+										HMC_RQST_VALID;
+								for( y=0; y<HMC_MAX_UQ_PACKET; y++){ 
+									hmc->devs[i].xbar[r_link].xbar_rsp[r_slot].packet[y] = 
+											lq[x].packet[y];
+									lq[x].packet[y]	= 0x00ll;
+								}
+
+								/* 
+								 * clear the source slot
+								 * 
+								 */
+								lq[x].valid = HMC_RQST_INVALID;
+
+							}else{
+
+								/* 
+								 * STALL! 
+								 *
+								 */
+
+								lq[x].valid = HMC_RQST_STALLED;
+
+								if( (hmc->tracelevel & HMC_TRACE_STALL)>0 ){
+								
+									/*
+									 * print a trace signal 
+									 *
+									 */
+									hmcsim_trace_stall( hmc, 
+											i, 
+											j, 
+											k,
+											0,
+											0,
+											0, 
+											x, 
+											2 );
+								}
 							}
 						}
 					}	
