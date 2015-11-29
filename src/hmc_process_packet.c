@@ -61,7 +61,7 @@ extern int	hmcsim_process_rqst( 	struct hmcsim_t *hmc,
 
 	uint64_t rsp_head		= 0x00ll;
 	uint64_t rsp_tail		= 0x00ll;
-	uint64_t rsp_slid		= 0x00ll;
+	uint64_t rsp_slid		= 0x00ll; 
 	uint64_t rsp_tag		= 0x00ll;
 	uint64_t rsp_crc		= 0x00ll;
 	uint64_t rsp_rtc		= 0x00ll;
@@ -69,6 +69,7 @@ extern int	hmcsim_process_rqst( 	struct hmcsim_t *hmc,
 	uint64_t rsp_frp		= 0x00ll;
 	uint64_t rsp_rrp		= 0x00ll;
 	uint32_t rsp_len		= 0x00;
+	uint64_t rsp_dreint		= 0x00ll;
 	uint64_t packet[HMC_MAX_UQ_PACKET];
 	
 	uint32_t cur			= 0x00;
@@ -155,40 +156,6 @@ extern int	hmcsim_process_rqst( 	struct hmcsim_t *hmc,
 	 *         if no slots available, then this operation must stall
 	 * 
  	 */
-
-	/* First, check if is a DRE setup command.  If it is, allocate one DRE.
-		If none are available, stall.
-	 */
-	
-	if (cmd == 0x38) {
-		if (dre_id < DRE_MAX) { 
-			++dre_id; 
-			HMCSIM_PRINT_INT_TRACE( "DRE Increased: ", (int)(DRE_MAX) );
-		}
-		else {
-			queue->valid = HMC_RQST_STALLED;
-			if( (hmc->tracelevel & HMC_TRACE_STALL) > 0 ){
-				hmcsim_trace_stall(	hmc,
-							dev,
-							0,
-							0,
-							0,
-							0,
-							0,
-							slot,
-							1 );
-			}
-		}
-	}
-
-	/* If this is a DRE release command, free up one DRE. */
-
-	if (cmd == 0x3B) { 
-		--dre_id; 
-		if (dre_id < 0) { dre_id = 0; }
-	}
-	
-	HMCSIM_PRINT_INT_TRACE( "DRE_ID: ", (int)(dre_id) );
 
 	/* -- find a response slot */
 	cur = hmc->queue_depth-1;
@@ -1188,6 +1155,7 @@ step4_vr:
 		rsp_seq		= ((tail>>16) & 0x07);
 		rsp_frp		= ((tail>>8) & 0xFF);
 		rsp_rrp		= (tail & 0xFF);
+		rsp_dreint	= ((tail>>23) & 0x01);
 
 		/* -- decode the repsonse command : see hmc_response.c */
 		hmcsim_decode_rsp_cmd( rsp_cmd, &(tmp8) );
@@ -1197,6 +1165,7 @@ step4_vr:
 		rsp_head	|= (rsp_len<<8);
 		rsp_head	|= (rsp_len<<11);
 		rsp_head	|= (rsp_tag<<15);
+		rsp_head	|= (rsp_dreint<<38);
 		rsp_head	|= (rsp_slid<<39); 
 
 		/* -- packet tail */

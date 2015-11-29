@@ -121,6 +121,10 @@ struct hmc_queue_t{
 
 struct hmc_dre_t{
 	uint32_t	id;
+	uint32_t    busy;
+	uint64_t    baseAddr;
+	uint64_t    stride;
+	uint64_t    numAccess;
 
 	struct hmc_queue_t *rqst_queue;
 	struct hmc_queue_t *rsp_queue;

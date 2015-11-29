@@ -272,7 +272,7 @@ extern int	hmcsim_build_memrequest( struct hmcsim_t *hmc,
 			cmd	= 0x38;		/* 111000 */
 			break;
 		case DRE_FILL:
-			flits	= 1;
+			flits	= 2;
 			cmd	= 0x39;		/* 111001 */
 			break;
 		case DRE_DRAIN:

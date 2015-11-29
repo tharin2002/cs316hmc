@@ -21,7 +21,7 @@ extern int	hmcsim_free_memory( struct hmcsim_t *hmc );
 extern int	hmcsim_config_devices( struct hmcsim_t *sim );
 extern int	hmc_reset_device( struct hmcsim_t *hmc, uint32_t dev );
 
-int dre_id = 0;
+//int dre_id = 0;
 
 /* ----------------------------------------------------- HMCSIM_INIT */
 /* 
