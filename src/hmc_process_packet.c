@@ -160,7 +160,7 @@ extern int	hmcsim_process_rqst( 	struct hmcsim_t *hmc,
 		If none are available, stall.
 	 */
 	
-	if (cmd == 0x37) {
+	if (cmd == 0x38) {
 		if (dre_id < DRE_MAX) { 
 			++dre_id; 
 			HMCSIM_PRINT_INT_TRACE( "DRE Increased: ", (int)(DRE_MAX) );
