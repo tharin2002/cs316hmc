@@ -41,8 +41,6 @@ extern int	hmcsim_util_decode_bank( struct hmcsim_t *hmc,
 extern int	hmcsim_decode_rsp_cmd( 	hmc_response_t rsp_cmd, 
 					uint8_t *cmd );
 
-extern int dre_id;
-const int DRE_MAX = 4;
 /* ----------------------------------------------------- HMCSIM_PROCESS_RQST */
 /* 
  * HMCSIM_PROCESS_RQST
