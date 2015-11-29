@@ -61,7 +61,7 @@ extern int	hmcsim_process_rqst( 	struct hmcsim_t *hmc,
 
 	uint64_t rsp_head		= 0x00ll;
 	uint64_t rsp_tail		= 0x00ll;
-	uint64_t rsp_slid		= 0x00ll;
+	uint64_t rsp_slid		= 0x00ll; 
 	uint64_t rsp_tag		= 0x00ll;
 	uint64_t rsp_crc		= 0x00ll;
 	uint64_t rsp_rtc		= 0x00ll;
@@ -69,6 +69,7 @@ extern int	hmcsim_process_rqst( 	struct hmcsim_t *hmc,
 	uint64_t rsp_frp		= 0x00ll;
 	uint64_t rsp_rrp		= 0x00ll;
 	uint32_t rsp_len		= 0x00;
+	uint64_t rsp_dreint		= 0x00ll;
 	uint64_t packet[HMC_MAX_UQ_PACKET];
 	
 	uint32_t cur			= 0x00;
@@ -1156,6 +1157,7 @@ step4_vr:
 		rsp_seq		= ((tail>>16) & 0x07);
 		rsp_frp		= ((tail>>8) & 0xFF);
 		rsp_rrp		= (tail & 0xFF);
+		rsp_dreint	= ((tail>>23) & 0x01);
 
 		/* -- decode the repsonse command : see hmc_response.c */
 		hmcsim_decode_rsp_cmd( rsp_cmd, &(tmp8) );
@@ -1165,6 +1167,7 @@ step4_vr:
 		rsp_head	|= (rsp_len<<8);
 		rsp_head	|= (rsp_len<<11);
 		rsp_head	|= (rsp_tag<<15);
+		rsp_head	|= (rsp_dreint<<38);
 		rsp_head	|= (rsp_slid<<39); 
 
 		/* -- packet tail */
