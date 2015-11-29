@@ -377,6 +377,8 @@ extern int	hmcsim_config_devices( struct hmcsim_t *hmc )
 		for ( d = 0; d < hmc->num_dres; d++ ) {
 			hmc->devs[i].dres[d].id = d;
 			hmc->devs[i].dres[d].busy = 0;
+			hmc->devs[i].dres[d].dreAddr = 0x300000000;
+			hmc->devs[i].dres[d].dreAddr |= d;
 			hmc->devs[i].dres[d].rqst_queue = &(hmc->__ptr_dre_rqst[cur_dreQueue]);
 			hmc->devs[i].dres[d].rsp_queue  = &(hmc->__ptr_dre_rsp[cur_dreQueue]);
 			for( b=0; b<hmc->dre_depth; b++){ 

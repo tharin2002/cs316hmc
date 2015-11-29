@@ -270,6 +270,7 @@ static int hmcsim_clock_process_rqst_queue( 	struct hmcsim_t *hmc,
 	uint32_t len	= 0;
 	uint32_t t_link	= 0;
 	uint32_t t_slot	= 0;
+	uint32_t r_slot	= 0;
 	uint32_t t_quad = 0;
 	uint32_t bsize	= 0;
 	uint32_t t_vault= hmc->queue_depth+1;
@@ -279,6 +280,19 @@ static int hmcsim_clock_process_rqst_queue( 	struct hmcsim_t *hmc,
 	uint64_t tail	= 0x00ll;
 	uint64_t addr	= 0x00ll;
 	uint32_t cmd	= 0x00;
+
+	uint64_t rsp_head		= 0x00ll;
+	uint64_t rsp_tail		= 0x00ll;
+	uint64_t rsp_slid		= 0x00ll; 
+	uint64_t rsp_tag		= 0x00ll;
+	uint64_t rsp_crc		= 0x00ll;
+	uint64_t rsp_rtc		= 0x00ll;
+	uint64_t rsp_seq		= 0x00ll;
+	uint64_t rsp_frp		= 0x00ll;
+	uint64_t rsp_rrp		= 0x00ll;
+	uint32_t rsp_len		= 0x00;
+	uint64_t rsp_dreint		= 0x00ll;
+	uint64_t packet[HMC_MAX_UQ_PACKET];
 	/* ---- */
 
 	/* 
@@ -404,19 +418,106 @@ static int hmcsim_clock_process_rqst_queue( 	struct hmcsim_t *hmc,
 			
 							success = 0;	
 						}else {
-	#ifdef HMC_DEBUG
-							HMCSIM_PRINT_INT_TRACE( "TRANSFERRING PACKET FROM SLOT", (int)(i) );
-							HMCSIM_PRINT_INT_TRACE( "TRANSFERRING PACKET TO DRE", (int)(dre_id) );
-	#endif
-							hmc->devs[dev].dres[dre_id].busy = 1;
-							hmc->devs[dev].dres[dre_id].baseAddr = 
-									hmc->devs[dev].xbar[link].xbar_rqst[i].packet[1];
-							hmc->devs[dev].dres[dre_id].stride = 
-									hmc->devs[dev].xbar[link].xbar_rqst[i].packet[2];
-							hmc->devs[dev].dres[dre_id].numAccess = 
-									hmc->devs[dev].xbar[link].xbar_rqst[i].packet[3];
+							/* build response and send to xbar rsp queue */
+							/* find a rsp queue slot */
+							r_slot = hmc->xbar_depth+1;
+							cur = hmc->xbar_depth-1;
+							for( j=0; j<hmc->xbar_depth; j++ ){	
+								if( hmc->devs[i].xbar[link].xbar_rsp[cur].valid == 
+										HMC_RQST_INVALID ){
+									r_slot = cur;
+								}
+								cur--;
+							}
+							if (r_slot == hmc->xbar_depth+1) {
+		#ifdef HMC_DEBUG
+								HMCSIM_PRINT_INT_TRACE( "STALLED DRE REQUEST AT SLOT", (int)(i) );
+		#endif
+								/* STALL */
+								hmc->devs[dev].xbar[link].xbar_rqst[i].valid = HMC_RQST_STALLED;
 						
-							success = 1;
+								/* 
+						 		* print a stall trace 
+						 		*
+						 		*/
+/*								if ((hmc->tracelevel & HMC_TRACE_STALL) >0 ) {
+									hmcsim_trace_stall(	hmc, 
+												dev, 
+												t_quad,
+												t_vault, 
+												0,
+												0,
+												0,
+												i, 
+												0 ); 
+								}*/
+			
+								success = 0;	
+							}else {
+		#ifdef HMC_DEBUG
+								HMCSIM_PRINT_INT_TRACE( "TRANSFERRING PACKET FROM SLOT", (int)(i) );
+								HMCSIM_PRINT_INT_TRACE( "TRANSFERRING PACKET TO DRE", (int)(dre_id) );
+		#endif
+								hmc->devs[dev].dres[dre_id].busy = 1;
+								hmc->devs[dev].dres[dre_id].baseAddr = 
+										hmc->devs[dev].xbar[link].xbar_rqst[i].packet[1];
+								hmc->devs[dev].dres[dre_id].stride = 
+										hmc->devs[dev].xbar[link].xbar_rqst[i].packet[2];
+								hmc->devs[dev].dres[dre_id].numAccess = 
+										hmc->devs[dev].xbar[link].xbar_rqst[i].packet[3];
+								hmc->devs[dev].dres[dre_id].numBack = 0;
+							
+								success = 1;
+
+								/* build response */
+/*								if( (hmc->tracelevel & HMC_TRACE_CMD) > 0 ){ 
+									hmcsim_trace_rqst(	hmc, 
+										"WR16", 
+										dev, 
+										quad,
+										vault, 
+										bank, 
+										addr, 
+										length );
+								}*/
+								rsp_slid 	= ((tail>>24) & 0x07);
+								rsp_tag		= ((header>>15) & 0x1FF );
+								rsp_crc		= ((tail>>32) & 0xFFFFFFFF);
+								rsp_rtc		= ((tail>>27) & 0x3F);
+								rsp_seq		= ((tail>>16) & 0x07);
+								rsp_frp		= ((tail>>8) & 0xFF);
+								rsp_rrp		= (tail & 0xFF);
+								rsp_dreint	= ((tail>>23) & 0x01);
+								rsp_len     = 2;
+						
+								rsp_head	|= 0x31;
+								rsp_head	|= (rsp_len<<8);
+								rsp_head	|= (rsp_len<<11);
+								rsp_head	|= (rsp_tag<<15);
+								rsp_head	|= (rsp_dreint<<38);
+								rsp_head	|= (rsp_slid<<39); 
+						
+								/* -- packet tail */
+								rsp_tail	|= (rsp_rrp);
+								rsp_tail	|= (rsp_frp<<8);
+								rsp_tail	|= (rsp_seq<<16);
+								rsp_tail	|= (rsp_rtc<<27);
+								rsp_tail	|= (rsp_crc<<32); 
+						
+								packet[0] 	= rsp_head;
+								packet[1]   = dre_id;
+								packet[2]   = hmc->devs[dev].dres[dre_id].dreAddr;
+								packet[3]	= rsp_tail;
+
+								hmc->devs[dev].xbar[link].xbar_rsp[r_slot].valid = 
+									HMC_RQST_VALID;
+								for( j=0; j<HMC_MAX_UQ_PACKET; j++){ 
+									hmc->devs[dev].xbar[link].xbar_rsp[r_slot].packet[j] = packet[j];
+									packet[j]	= 0x00ll;
+								}
+									
+							}
+
 						}
 					}
 

@@ -41,7 +41,11 @@ typedef enum{
 	MD_RD_RS, 			/*! HMC-SIM: HMC_RESPONSE_T: MODE READ RESPONSE */
 	MD_WR_RS,			/*! HMC-SIM: HMC_RESPONSE_T: MODE WRITE RESPONSE */
 	RSP_ERROR,			/*! HMC-SIM: HMC_RESPONSE_T: ERROR RESPONSE */
-	RSP_NONE			/*! HMC-SIM: HMC_RESPONSE_T: NO RESPONSE COMMAND */
+	RSP_NONE,			/*! HMC-SIM: HMC_RESPONSE_T: NO RESPONSE COMMAND */
+	SETUP_RS,
+	FILL_RS,
+	DRAIN_RS,
+	RELEASE_RS
 }hmc_response_t;
 
 typedef enum{
@@ -125,7 +129,8 @@ struct hmc_dre_t{
 	uint64_t    baseAddr;
 	uint64_t    stride;
 	uint64_t    numAccess;
-
+	uint32_t    numBack;
+	uint64_t    dreAddr;
 	struct hmc_queue_t *rqst_queue;
 	struct hmc_queue_t *rsp_queue;
 };

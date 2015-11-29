@@ -23,6 +23,18 @@ extern int	hmcsim_decode_rsp_cmd(	hmc_response_t rsp_cmd, uint8_t *cmd )
 {
 	switch( rsp_cmd )
 	{
+		case SETUP_RS:
+			*cmd = 0x31;
+			break;
+		case FILL_RS:
+			*cmd = 0x32;
+			break;
+		case DRAIN_RS:
+			*cmd = 0x33;
+			break;
+		case RELEASE_RS:
+			*cmd = 0x34;
+			break;
 		case RD_RS:
 			*cmd = 0x38;
 			break;
@@ -104,6 +116,18 @@ extern int	hmcsim_decode_memresponse( 	struct hmcsim_t *hmc,
 	{
 		case 0x00:
 			*type	= RSP_NONE;
+			break;
+		case 0x31:
+			*type	= SETUP_RS;
+			break;
+		case 0x32:
+			*type	= FILL_RS;
+			break;
+		case 0x33:
+			*type	= DRAIN_RS;
+			break;
+		case 0x34:
+			*type	= RELEASE_RS;
 			break;
 		case 0x38:
 			/* 111000 */
