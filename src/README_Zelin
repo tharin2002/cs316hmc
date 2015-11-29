@@ -49,6 +49,22 @@ Similar question for fill. Can we decode the fill command into actual memory acc
 				packet[1] = dre_id;
 				packet[2] = other;
 				packet[3] = tail;
+	(c) release
+				hmcsim_build_memrequest( hmc, 
+							cub, 
+							addr[iter], 
+							tag, 
+							DRE_RELEASE,
+							link, 
+							&(payload[0]), 
+							&head, 
+							&tail );
+
+				packet[0] = head;
+				packet[1] = dre_id;
+				packet[2] = other;
+				packet[3] = tail;
+
 (2) build_memrequest:
 		case DRE_SETUP:
 			flits	= 3;	
@@ -63,12 +79,13 @@ Similar question for fill. Can we decode the fill command into actual memory acc
 			cmd	= 0x3A;		/* 111010 */
 			break;
 		case DRE_RELEASE:
-			flits	= 1;
+			flits	= 2;
 			cmd	= 0x3B;		/* 111011 */
 (3) send to xbar 
 (4) hmcsim_clock_process_rqst_queue
-	(a) setup: right there - pick available dre and set its registers
+	(a) setup: right there - pick available dre and set its registers, build response to xbar
 	(b) fill: allocate dre queue
+	(c) release: release dre (without response?)
 (5) send response to xbar
 		case SETUP_RS:
 			*cmd = 0x31;

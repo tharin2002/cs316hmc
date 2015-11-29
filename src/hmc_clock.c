@@ -581,6 +581,18 @@ static int hmcsim_clock_process_rqst_queue( 	struct hmcsim_t *hmc,
 						}
 					}
 
+					/* release implementation */
+					else if (cmd == 59) {
+						dre_id = (uint32_t)hmc->devs[dev].xbar[link].xbar_rqst[i].packet[1];
+#ifdef HMC_DEBUG
+						HMCSIM_PRINT_INT_TRACE( "TRANSFERRING PACKET FROM SLOT", (int)(i) );
+						HMCSIM_PRINT_INT_TRACE( "TRANSFERRING PACKET TO DRE", (int)(dre_id) );
+#endif
+						hmc->devs[dev].dres[dre_id].busy = 0;
+					
+						success = 1;
+					}
+
 				} else {
 
 					/* 

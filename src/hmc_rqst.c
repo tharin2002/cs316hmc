@@ -280,7 +280,7 @@ extern int	hmcsim_build_memrequest( struct hmcsim_t *hmc,
 			cmd	= 0x3A;		/* 111010 */
 			break;
 		case DRE_RELEASE:
-			flits	= 1;
+			flits	= 2;
 			cmd	= 0x3B;		/* 111011 */
 			break;
 		default:
