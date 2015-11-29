@@ -1,0 +1,96 @@
+README
+
+1. minor change to hmc_sim_types.c and hmc_config_devs.c: add dre pointer to hmc_dev_t, configure it during device configuration. For example, initilize dre_id
+TO DO: define hmc_dre_t, configure dre registers, think about dre related queues
+
+2. Assume application driver has built memrequest package like physrand ----- change request package build for new command
+Add parameters into payload?
+hmcsim_send ----- send mem request for fill but deal with setup immediately
+
+3. questions to discuss 
+(1) Where should we process setup or fill request?
+For a regular read and write request, it will go through the following steps: build memrequest -> send to xbar -> send to request queue of a vault -> process request and generate response to vault response queue -> return back to xbar response queue -> receive and decode.
+For setup, is it necessary to send the request to xbar? If so, since there are 4 xbars for 4 links, which one should it be sent. If not, can we check the command before sending to xbar and update DRE registers?
+Similar question for fill. Can we decode the fill command into actual memory access command and only send those real memory access command to xbar?
+(2) What is the interface between application and HMC-Sim? I guess a driver will call build_memrequest with hmc_rqst_type = setup/fill, and other information like base address, stride, num of access, etc. Then by modifying hmcsim_send() (if we plan to process DRE related command before sending to xbar), we can update DRE directly for setup and generate corresponding memory access for fill. Does it make sense? To pass additional information like stride, can we redefine parameters of build_memrequest()? For example, assume cub represents stride when type == setup.
+(3) I saw you have implemented dre_rqst queue and dre_rsp queue. I am not sure the purpose of those queues? If we issue stall when we run out of DREs and return available DRE id otherwise, do we need to queue the DRE request?
+
+4. setup implementation
+(1) driver:
+	(a) setup
+				hmcsim_build_memrequest( hmc, 
+							cub, 
+							addr[iter], 
+							tag, 
+							DRE_SETUP,
+							link, 
+							&(payload[0]), 
+							&head, 
+							&tail );
+
+				packet[0] = head;
+				packet[1] = base_address;
+				packet[2] = stride;
+				packet[3] = num;
+				packet[4] = other;
+				packet[5] = tail;
+	(b) fill
+				hmcsim_build_memrequest( hmc, 
+							cub, 
+							addr[iter], 
+							tag, 
+							DRE_FILL,
+							link, 
+							&(payload[0]), 
+							&head, 
+							&tail );
+
+				packet[0] = head;
+				packet[1] = dre_id;
+				packet[2] = other;
+				packet[3] = tail;
+(2) build_memrequest:
+		case DRE_SETUP:
+			flits	= 3;	
+			cmd	= 0x38;		/* 111000 */
+			break;
+		case DRE_FILL:
+			flits	= 2;
+			cmd	= 0x39;		/* 111001 */
+			break;
+		case DRE_DRAIN:
+			flits	= 1;
+			cmd	= 0x3A;		/* 111010 */
+			break;
+		case DRE_RELEASE:
+			flits	= 1;
+			cmd	= 0x3B;		/* 111011 */
+(3) send to xbar 
+(4) hmcsim_clock_process_rqst_queue
+	(a) setup: right there - pick available dre and set its registers
+	(b) fill: allocate dre queue
+(5) send response to xbar
+		case SETUP_RS:
+			*cmd = 0x31;
+			break;
+		case FILL_RS:
+			*cmd = 0x32;
+			break;
+		case DRAIN_RS:
+			*cmd = 0x33;
+			break;
+		case RELEASE_RS:
+			*cmd = 0x34;
+			break;
+
+		Define dreAddr: 
+			hmc->devs[i].dres[d].dreAddr = 0;
+			hmc->devs[i].dres[d].dreAddr |= (1<<33);
+			hmc->devs[i].dres[d].dreAddr |= d;
+
+	(a) setup: 2 flits head, dre_id, dre_address, dre_tail
+				packet[0] 	= rsp_head;
+				packet[1]   = dre_id;
+				packet[2]   = hmc->devs[dev].dres[dre_id].dreAddr;
+				packet[3]	= rsp_tail;
+(6) driver: receive and decode
