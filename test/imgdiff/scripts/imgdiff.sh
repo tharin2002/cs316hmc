@@ -1,0 +1,20 @@
+#!/bin/bash
+#-- sample small test
+
+PHYSRAND=../imgdiff
+
+BANKS=8
+CAPACITY=2
+LINKS=4
+BSIZE=128
+QDEPTH=64
+XDEPTH=128
+VAULTS=16
+NRQSTS=3750
+DRAMS=20
+
+echo "Executing : $PHYSRAND -b $BANKS -c $CAPACITY -l $LINKS -m $BSIZE -n 1 -q $QDEPTH -x $XDEPTH\
+	-d $DRAMS -v $VAULTS -N $NRQSTS -S 65656"
+
+$PHYSRAND -b $BANKS -c $CAPACITY -l $LINKS -m $BSIZE -n 1 -q $QDEPTH -x $XDEPTH\
+	-d $DRAMS -v $VAULTS -N $NRQSTS -S 65656

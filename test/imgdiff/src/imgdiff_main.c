@@ -16,19 +16,17 @@
 #include "hmc_sim.h"
 
 /* ----------------------------------------------------- FUNCTION PROTOTYPES */
-extern int genrands( 	uint64_t *addr, 
-			uint32_t *req, 
-			long num_req, 
+extern int genimg( 	uint64_t *addr, 
 			uint32_t seed, 
 			uint32_t num_dev, 
 			uint32_t capacity, 
-			uint32_t read_perct, 
-			uint32_t write_perct, 
+            uint64_t imgsize,
 			uint32_t shiftamt );
 extern int execute_test( struct hmcsim_t *hmc, 
-			uint64_t *addr, 
-			uint32_t *req, 
-			long num_req );
+			uint64_t *addr,
+            uint64_t imgsize,
+            uint64_t width, 
+			uint32_t stride );
 extern int getshiftamount( uint32_t num_links, 
 			uint32_t capacity,
 			uint32_t bsize, 
@@ -47,24 +45,24 @@ extern int main( int argc, char **argv )
 	uint32_t num_devs	= 0;
 	uint32_t num_links	= 0;
 	uint32_t num_vaults	= 0;
-	uint32_t num_dres	= 0;
 	uint32_t queue_depth	= 0;
 	uint32_t num_banks	= 0;
 	uint32_t num_drams	= 0;
 	uint32_t capacity	= 0;
 	uint32_t xbar_depth	= 0;	
-	uint32_t read_perct	= 50;
-	uint32_t write_perct	= 50;	
 	uint32_t seed		= 0;
 	uint32_t bsize		= 128;
 	uint32_t shiftamt	= 0;
-	long num_req		= 0x0Fl;
+//	long num_req		= 0x0Fl;
 	uint64_t *addr		= NULL;
-	uint32_t *req		= NULL;
+    uint64_t imgsize    = 0;
+    uint64_t width      = 0;
+    uint32_t stride     = 0;
+//	uint32_t *req		= NULL;
 	struct hmcsim_t hmc;
 	/* ---- */
 
-	while(( ret = getopt( argc, argv, "b:c:d:hl:m:n:q:v:x:z:N:R:S:W:" )) != -1 )
+	while(( ret = getopt( argc, argv, "b:c:d:hl:m:n:q:v:x:N:T:S:W:" )) != -1 )
 	{
 		switch( ret )
 		{
@@ -78,7 +76,7 @@ extern int main( int argc, char **argv )
 				num_drams = (uint32_t)(atoi(optarg));
 				break;
 			case 'h': 
-				printf( "%s%s%s\n", "usage : ", argv[0], " -bcdhlmnqvxNRSW" );
+				printf( "%s%s%s\n", "usage : ", argv[0], " -bcdhlmnqvxNTSW" );
 				printf( " -b <num_banks>\n" );
 				printf( " -c <capacity>\n" );
 				printf( " -d <num_drams>\n" );
@@ -89,11 +87,10 @@ extern int main( int argc, char **argv )
 				printf( " -q <queue_depth>\n" );
 				printf( " -v <num_vaults>\n" );
 				printf( " -x <xbar_depth>\n" );
-				printf( " -z <num_dres>\n" );
-				printf( " -N <num_requests>\n" );
-				printf( " -R <read_percentage>\n" );
+				printf( " -N <image_size>\n" );
+                printf( " -W <image_width>\n" );    
+                printf( " -T <stride>\n" );
 				printf( " -S <seed>\n" );
-				printf( " -W <write_percentage>\n" );
 				return 0;
 				break;
 			case 'l':
@@ -114,20 +111,18 @@ extern int main( int argc, char **argv )
 			case 'x': 
 				xbar_depth = (uint32_t)(atoi(optarg));
 				break;
-			case 'z':
-				num_dres = (uint32_t)(atoi(optarg));
-				break;
 			case 'N':
-				num_req	= (long)(atol(optarg));
+				imgsize	= (uint64_t)(atol(optarg));
 				break;
-			case 'R': 
-				read_perct = (uint32_t)(atoi(optarg));
-				break;
+            case 'W':
+                width = (uint64_t)(atol(optarg));
+                break;
+ 
+            case 'T':
+                stride = (uint32_t)(atoi(optarg));
+                break;
 			case 'S':
 				seed = (uint32_t)(atoi(optarg));
-				break;
-			case 'W':
-				write_perct = (uint32_t)(atoi(optarg));
 				break;
 			case '?':
 			default:
@@ -141,10 +136,6 @@ extern int main( int argc, char **argv )
 	 * sanity check the runtime args 
 	 * 
 	 */
-	if( (read_perct+write_perct)!=100 ){ 
-		printf( "FAILED TO VALIDATE ARGS: READ+WRITE PERCENTAGE MUST == 100\n" );
-		return -1;
-	}
 
 	if( (num_devs < 1 ) || ( num_devs > 8 ) ){
 		printf( "FAILED TO VALIDATE ARGS: NUM DEVS OUT OF BOUNDS\n" );
@@ -160,18 +151,12 @@ extern int main( int argc, char **argv )
 	 * allocate memory 
 	 * 
  	 */
-	addr = malloc( sizeof( uint64_t ) * num_req );
+	addr = malloc( sizeof( uint64_t ) * 3 ); // Change later from dynamic to static alloation
 	if( addr == NULL ){ 
 		printf( "FAILED TO ALLOCATE MEMORY FOR ADDR\n" );
 		return -1;
 	}
 
-	req = malloc( sizeof( uint32_t ) * num_req );
-	if( req == NULL ){ 
-		printf( "FAILED TO ALLOCATE MEMORY FOR REQ\n" );
-		free( addr ); addr = NULL;
-		return -1;
-	}
 
 	/* 
 	 * get the address shift amount based upon 
@@ -189,20 +174,17 @@ extern int main( int argc, char **argv )
 	 * generate the inputs
 	 * 
 	 */
-	if( genrands( 	addr, 
-			req, 
-			num_req, 
+	if( genimg( 	addr, 
 			seed, 
 			num_devs,
-			capacity, 
-			read_perct, 
-			write_perct, 
+			capacity,
+            imgsize,
 			shiftamt ) != 0 ){
-		printf( "FAILED TO GENERATE RANDOM INPUTS\n" );
+		printf( "FAILED TO GENERATE IMAGE INPUTS\n" );
 		free( addr );
 		addr = NULL;
-		free( req );
-		req = NULL;
+//		free( req );
+//		req = NULL;
 		return -1;
 	}
 	
@@ -214,15 +196,18 @@ extern int main( int argc, char **argv )
 	 */
 
 	ret = hmcsim_init(	&hmc, 
-				num_devs, 
-				num_links, 
-				num_vaults, 
-				queue_depth, 
-				num_banks, 
-				num_drams, 
-				capacity, 
-				xbar_depth,
-				1, num_dres );
+                num_devs,
+                num_links,
+                num_vaults,
+                queue_depth,
+                num_banks,
+                num_drams,
+                capacity,
+                xbar_depth,
+                1,4 );
+
+
+
 	if( ret != 0 ){ 
 		printf( "FAILED TO INIT HMCSIM : return code=%d\n", ret );	
 		return -1;
@@ -258,8 +243,8 @@ extern int main( int argc, char **argv )
 				hmcsim_free( &hmc );
 				free( addr );
 				addr = NULL;
-				free( req );
-				req = NULL;
+//				free( req );
+//				req = NULL;
 				return -1;
 			}else{ 
 				printf( "SUCCESS : INITIALIZED LINK %d\n", i );
@@ -278,8 +263,8 @@ extern int main( int argc, char **argv )
 		hmcsim_free( &hmc );
 		free( addr );
 		addr = NULL;
-		free( req );
-		req = NULL;
+//		free( req );
+//		req = NULL;
 		return -1;
 	}else {
 		printf( "SUCCESS : INITALIZED MAX BLOCK SIZE\n" );
@@ -289,13 +274,13 @@ extern int main( int argc, char **argv )
 	 * execute the test
 	 * 
 	 */
-	if( execute_test( &hmc, addr, req, num_req ) != 0 ) {
+	if( execute_test( &hmc, addr, imgsize, width, stride ) != 0 ) {
 		printf( "FAILED TO EXECUTE TEST\n" );
 		hmcsim_free( &hmc );
 		free( addr );
 		addr = NULL;
-		free( req );
-		req = NULL;
+//		free( req );
+//		req = NULL;
 		return -1;
 	}
 
@@ -311,8 +296,8 @@ extern int main( int argc, char **argv )
  	 */
 	free( addr );
 	addr = NULL;
-	free( req );
-	req = NULL;
+//	free( req );
+//	req = NULL;
 	
 	if( ret != 0 ){ 
 		printf( "FAILED TO FREE HMCSIM\n" );
