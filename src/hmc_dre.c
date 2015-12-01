@@ -73,19 +73,30 @@ extern int	hmcsim_process_dre_queue( struct hmcsim_t *hmc )
 					addr = hmc->devs[0].dres[i].baseAddr;
 					for (x=0; x<hmc->devs[0].dres[i].numAccess; x++) {
 						newaddr = addr+(x*4*hmc->devs[0].dres[i].stride);
+						/* CMD field - Hard coded to a read */
 						newhead |= (0x31 & 0x3F);
+						/* LNG field in flits */
 						newhead |= ( (uint64_t)(1 & 0xF) << 7 );
+						/* Duplicate LNG field in flits */
 						newhead |= ( (uint64_t)(1 & 0xF) << 11 );
+						/* Tag field, duplicating the tag on the original fill */
 						newhead |= ( (uint64_t)(tag & 0x1FF) << 15 );
+						/* Address based on calculated base and stride */
 						newhead |= ( (uint64_t)(newaddr & 0x3FFFFFFFF) << 24 );
 
+						/* RRP value */
 						newtail |= 0x03;
+						/* FRP value */
 						newtail |= ( (uint64_t)(0x02 & 0xFF) << 8 );
+						/* Sequence number */
 						newtail |= ( (uint64_t)(0x01 & 0x7) << 16 );
 						/* Set bit 23 to 1 for DRE internal request */
 						newtail |= ( (uint64_t)(1 & 0x1) << 23 );
+						/* Source link ID */
 						newtail |= ( (uint64_t)(i & 0x7) << 24 );
+						/* Return token count */
 						newtail |= ( (uint64_t)(0x01 & 0x1F) << 27 );;
+						/* CRC (Not checked for sim) */
 						newtail |= ( (uint64_t)(0x11111111 & 0xFFFFFFFF) << 32 );
 
 						packet[0] = newhead;
