@@ -201,7 +201,7 @@ extern int	hmcsim_process_dre_queue( struct hmcsim_t *hmc )
 		}
 
 		/* When number of finished responses is equal to the number of requests, complete the FILL */
-		if ( hmc->devs[0].dres[i].numBack == hmc->devs[0].dres[i].numAccess && hmc->devs[0].dres[i].rqst_queue[j].valid == HMC_RQST_STALLED) {
+		if ( hmc->devs[0].dres[i].numBack == hmc->devs[0].dres[i].numAccess && hmc->devs[0].dres[i].rqst_queue[0].valid == HMC_RQST_STALLED) {
 			/* Generate a response stating that the fill is complete */
 			queue	= &(hmc->devs[0].dres[i].rqst_queue[0]);
 			head	= queue->packet[0];
@@ -347,5 +347,5 @@ extern int	hmcsim_process_dre_queue( struct hmcsim_t *hmc )
 		}
 
 	}
-
+	return 0;
 }

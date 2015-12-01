@@ -65,6 +65,7 @@ extern int hmcsim_util_decode_qv(	struct hmcsim_t *hmc,
 					uint32_t *vault );
 extern int hmcsim_util_is_root( 	struct hmcsim_t *hmc, 
 					uint32_t dev );
+extern int	hmcsim_process_dre_queue( struct hmcsim_t *hmc );
 
 #ifdef HMC_DEBUG
 /* ----------------------------------------------------- HMCSIM_CLOCK_PRINT_XBAR_STATS */
@@ -1839,6 +1840,10 @@ extern int	hmcsim_clock( struct hmcsim_t *hmc )
 	HMCSIM_PRINT_TRACE( "STAGE5: REGISTER RESPONSES" );
 #endif
 	if( hmcsim_clock_reg_responses( hmc ) != 0 ){ 
+		return -1;
+	}
+
+	if( hmcsim_process_dre_queue( hmc ) != 0 ){ 
 		return -1;
 	}
 
