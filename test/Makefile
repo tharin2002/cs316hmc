@@ -6,7 +6,7 @@
 
 
 #SUBDIRS :=	simple hmc_physrand decode_physrand 1dfft 2dfft stream
-SUBDIRS :=	dre_test
+SUBDIRS :=	dre_test imgdiff
 
 CLEANDIRS :=	$(addsuffix .clean, $(SUBDIRS))
 

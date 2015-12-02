@@ -112,6 +112,11 @@ extern int execute_test(	struct hmcsim_t *hmc,
 
 
 
+    uint64_t newhead        = 0x00ll;
+
+    uint8_t canIssueFill = 0;
+    
+
     waiting = malloc( sizeof( short ) * hmc->num_links );
     memset( waiting, -1, sizeof( short ) * hmc->num_links );
 
@@ -176,9 +181,10 @@ extern int execute_test(	struct hmcsim_t *hmc,
     // Attempt to execute all the requests, Push requests into the device  until we get a stall signal 
 
     while (!done){
-
+        printf("still not done\n");
 		// attempt to push a request in as long as we don't stall 		
 		if( iter >= num_req ){  
+            printf("nothing to send\n");
 			/* everything is sent, go to receive side */
 			goto packet_recv;
 		}
@@ -194,7 +200,7 @@ extern int execute_test(	struct hmcsim_t *hmc,
 
                     hmcsim_build_memrequest( hmc,
                                             cub,
-                                            addr[iter],
+                                            rowbase, //addr[iter],
                                             tag,
                                             DRE_SETUP,
                                             link,
@@ -212,7 +218,25 @@ extern int execute_test(	struct hmcsim_t *hmc,
                     base_address = rowbase + (setup_packet * stride * 4 * pixels);
                     
 
-                    packet[0] = head;//UPDATE
+
+                        /* CMD field - Hard coded to dre stetup */
+                        newhead |= (0x38 & 0x3F);
+                        /* LNG field in flits */
+                        newhead |= ( (uint64_t)(3 & 0xF) << 7 );
+                        /* Duplicate LNG field in flits */
+                        newhead |= ( (uint64_t)(3 & 0xF) << 11 );
+                        /* Tag field, duplicating the tag on the original fill */
+                        newhead |= ( (uint64_t)(tag & 0x1FF) << 15 );
+                        /* Address based on calculated base and stride */
+                        newhead |= ( (uint64_t)(base_address & 0x3FFFFFFFF) << 24 );
+
+
+                        packet[0] = newhead;
+
+
+
+                   // packet[0] = head;//UPDATE
+//                    packet[1] = tail;
                     packet[1] = base_address;
                     packet[2] = stride * 4; // Striding accounts for pixels occupying 4 bytes 
                     packet[3] = pixels;    //Number of elements (pixels) to be retrieved
@@ -225,8 +249,9 @@ extern int execute_test(	struct hmcsim_t *hmc,
                 }
 
                else if(isFill){
-
-                    if(waiting[link] < 0){
+                    printf("Processin fill \n");
+                    if (canIssueFill){
+                        printf("Ready to fill\n");
                         hmcsim_build_memrequest( hmc,
                                                 cub,
                                                 addr[iter],
@@ -237,7 +262,19 @@ extern int execute_test(	struct hmcsim_t *hmc,
                                                 &head,
                                                 &tail );
 
-                        packet[0] = head;
+                        /* CMD field - Hard coded to dre stetup */
+                        newhead |= (0x39 & 0x3F);
+                        /* LNG field in flits */
+                        newhead |= ( (uint64_t)(2 & 0xF) << 7 );
+                        /* Duplicate LNG field in flits */
+                        newhead |= ( (uint64_t)(2 & 0xF) << 11 );
+                        /* Tag field, duplicating the tag on the original fill */
+                        newhead |= ( (uint64_t)(tag & 0x1FF) << 15 );
+                        /* Address based on calculated base and stride */
+                        newhead |= ( (uint64_t)(base_address & 0x3FFFFFFFF) << 24 );
+
+
+                        packet[0] = newhead;
                         packet[1] = dre_id[link];
                         packet[2] = 0;//other;
                         packet[3] = tail;
@@ -283,7 +320,7 @@ extern int execute_test(	struct hmcsim_t *hmc,
                 }
                         
                 else {
-
+                    printf("Unknown cmd\n");
                    fprintf(afile, "Unidentified state \n" );
 
                 }
@@ -291,7 +328,7 @@ extern int execute_test(	struct hmcsim_t *hmc,
 			
 			// Step 2: Send it 
 			 
-			printf( "...sending packet : base addr=0x%016llx\n", (long long int )addr[iter] );
+			printf( "...sending packet base addr=0x%016llx\n", (long long int )addr[iter] );
 
 #if 0
 			for( i=0; i<HMC_MAX_UQ_PACKET; i++){ 
@@ -299,14 +336,17 @@ extern int execute_test(	struct hmcsim_t *hmc,
 			}
 #endif
 	
-            if (isFill && (waiting[link] >=  0)){
+            if (isFill && !canIssueFill/*(waiting[link] >=  0)*/){
                 ret = HMC_STALL;
                 fprintf(afile, "Link %d stalled Waiting for setup response, tage %d \n", (int) link, (int) waiting[link] );
             }
-            else
+            else{
 			    ret = hmcsim_send( hmc, &(packet[0]) );
+                printf( "RET = %d \n", ret);
+            }
 
-			switch( ret ){ 
+
+		switch( ret ){ 
 				case 0: 
 					printf( "SUCCESS : PACKET WAS SUCCESSFULLY SENT\n" );
 					iter++;
@@ -314,6 +354,7 @@ extern int execute_test(	struct hmcsim_t *hmc,
                     if(isSetup){
                         isSetup=0;
                         waiting[link] = tag;
+                        canIssueFill = 0;
                         isFill = 1;                        
                     }
 
@@ -437,7 +478,8 @@ packet_recv:
                         waiting[z] = -1;
                         dre_id[z]  = packet[1];
                         dre_addr[z] = packet[2];
-
+                        canIssueFill = 1;    
+                    
 				}
 
 				/* 
@@ -482,7 +524,7 @@ packet_recv:
 		 */
 		printf( "SIGNALING HMCSIM TO CLOCK\n" );
 		hmcsim_clock( hmc );
-
+        printf("signalling done\n");
 		fflush( stdout );
 
 

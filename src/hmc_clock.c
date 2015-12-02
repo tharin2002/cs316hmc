@@ -426,7 +426,7 @@ static int hmcsim_clock_process_rqst_queue( 	struct hmcsim_t *hmc,
 							r_slot = hmc->xbar_depth+1;
 							cur = hmc->xbar_depth-1;
 							for( j=0; j<hmc->xbar_depth; j++ ){	
-								if( hmc->devs[i].xbar[link].xbar_rsp[cur].valid == 
+								if( hmc->devs[dev].xbar[link].xbar_rsp[cur].valid == 
 										HMC_RQST_INVALID ){
 									r_slot = cur;
 								}
