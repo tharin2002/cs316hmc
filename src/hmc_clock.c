@@ -598,7 +598,7 @@ static int hmcsim_clock_process_rqst_queue( 	struct hmcsim_t *hmc,
 					}
 				} else {
 					/* If this is a RD_32, check to see if it has a DRE target */
-					dre_target = hmc->num_dres+1;
+					dretarget = hmc->num_dres+1;
 					if (cmd == 49) {
 
 						for (j=0; j<hmc->num_dres; j++) {
