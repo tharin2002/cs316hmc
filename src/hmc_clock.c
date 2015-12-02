@@ -183,6 +183,7 @@ static int hmcsim_clock_process_rsp_queue( 	struct hmcsim_t *hmc,
 			 * 	    slots
 			 *
 			 */
+			t_slot = hmc->xbar_depth+1;
 			cur = hmc->xbar_depth-1;
 			for( j=0; j<hmc->xbar_depth; j++ ){	
 				if( queue[cur].valid == HMC_RQST_INVALID ){ 
@@ -597,7 +598,9 @@ static int hmcsim_clock_process_rqst_queue( 	struct hmcsim_t *hmc,
 					}
 				} else {
 					/* If this is a RD_32, check to see if it has a DRE target */
+					dre_target = hmc->num_dres+1;
 					if (cmd == 49) {
+
 						for (j=0; j<hmc->num_dres; j++) {
 							if (hmc->devs[dev].dres[j].dreAddr == addr) {
 								dretarget = j;
@@ -1317,7 +1320,7 @@ static int hmcsim_clock_reg_responses( struct hmcsim_t *hmc )
 	uint32_t x		= 0;
 	uint32_t y		= 0;
 	uint32_t r_link		= 0;
-	uint32_t r_slot		= hmc->xbar_depth+1;
+	uint32_t r_slot		= 0;
 	int64_t header	= 0x00ll;
 	struct hmc_queue_t *lq	= NULL;
 	/* ---- */
@@ -1361,6 +1364,7 @@ static int hmcsim_clock_reg_responses( struct hmcsim_t *hmc )
 
 						header 	= lq[x].packet[0];
 						if ( ((uint32_t)((header>>38) & 0x1)) == 1) {
+							r_slot = hmc->dre_depth+1;
 							cur = hmc->dre_depth-1;
 							for ( y=0; y<hmc->dre_depth; y++ ) {
 								if ( hmc->devs[i].dres[r_link].rsp_queue[cur].valid == HMC_RQST_INVALID ) {
@@ -1408,6 +1412,7 @@ static int hmcsim_clock_reg_responses( struct hmcsim_t *hmc )
 							 * xbar queue has an empty slot
 							 * 
 							 */
+							r_slot = hmc->xbar_depth+1;
 							cur = hmc->xbar_depth-1;
 							for( y=0; y<hmc->xbar_depth; y++ ){	
 								if( hmc->devs[i].xbar[r_link].xbar_rsp[cur].valid == 

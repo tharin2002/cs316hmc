@@ -141,6 +141,7 @@ extern int	hmcsim_process_dre_queue( struct hmcsim_t *hmc )
 
 					r_link = (uint32_t)((head>>39) & 0x7);
 					/* Send the read response to the xbar queue */
+					r_slot = hmc->xbar_depth+1;
 					cur = hmc->xbar_depth-1;
 					for( x=0; x<hmc->xbar_depth; x++ ){	
 						if( hmc->devs[0].xbar[r_link].xbar_rsp[cur].valid == 
@@ -252,6 +253,7 @@ extern int	hmcsim_process_dre_queue( struct hmcsim_t *hmc )
 
 			r_link = (uint32_t)((head>>39) & 0x7);
 			/* Send the read response to the xbar queue */
+			r_slot = hmc->xbar_depth+1;
 			cur = hmc->xbar_depth-1;
 			for( x=0; x<hmc->xbar_depth; x++ ){	
 				if( hmc->devs[0].xbar[r_link].xbar_rsp[cur].valid == 

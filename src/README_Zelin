@@ -105,6 +105,8 @@ Similar question for fill. Can we decode the fill command into actual memory acc
 			hmc->devs[i].dres[d].dreAddr |= (1<<33);
 			hmc->devs[i].dres[d].dreAddr |= d;
 
+			((dre_id & 0x3FFFFFFFF) << 32);
+
 	(a) setup: 2 flits head, dre_id, dre_address, dre_tail
 				packet[0] 	= rsp_head;
 				packet[1]   = dre_id;
