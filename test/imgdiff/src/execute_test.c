@@ -1,4 +1,4 @@
-/* 
+/*
  * _EXECUTE_TEST_C_ 
  * 
  * HMCSIM PHYSRAND TEST EXECUTION FUNCTIONS
@@ -473,7 +473,14 @@ extern int execute_test(	struct hmcsim_t *hmc,
 
 
 packet_recv:
-		/* 
+		
+ for (w=0; w<4; w++){
+                        printf("Tag[%d]=%d\n ", w, tags[w]);
+
+                    }
+
+
+/* 
 		 * reset the return code for receives
 		 * 
 		 */
@@ -516,8 +523,9 @@ packet_recv:
                                         printf( "RECV tag=%d; rtn_tag=%d\n", d_tag, d_rtn_tag );
 				
                     total_recv++;
+                    printf("Tag received %d, tag of link %d\n", d_tag, tags[z]);
 
-                    if (tags[z] == d_rtn_tag)
+                    if (tags[z] == d_tag)
                         status[z] = FILL;
                         dre_id[z]  = packet[1];
                         dre_addr[z] = packet[2]; 

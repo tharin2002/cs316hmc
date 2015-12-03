@@ -15,6 +15,8 @@ WIDTH=128
 STRIDE=4
 DRAMS=20
 
+# -b 8 -c 2 -l 4 -m 64 -n 1 -q 64 -x 128 -d 20 -v 16 -N 8480  -W 128 -T 4 -S 65656"
+
 echo "Executing : $PHYSRAND -b $BANKS -c $CAPACITY -l $LINKS -m $BSIZE -n 1 -q $QDEPTH -x $XDEPTH\
 	-d $DRAMS -v $VAULTS -N $IMGSIZE  -W $WIDTH -T $STRIDE -S 65656"
 
