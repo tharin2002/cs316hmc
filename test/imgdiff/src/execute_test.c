@@ -116,7 +116,7 @@ extern int execute_test(	struct hmcsim_t *hmc,
 
 
     uint64_t newhead        = 0x00ll;
-
+    uint64_t newtail        = 0x00ll;
     
 
     status = malloc( sizeof( uint8_t ) * hmc->num_links );
@@ -243,13 +243,27 @@ extern int execute_test(	struct hmcsim_t *hmc,
                         /* Address based on calculated base and stride */
                         newhead |= ( (uint64_t)(base_address & 0x3FFFFFFFF) << 24 );
 
+                        /* RRP value */
+                        newtail |= 0x03;
+                        /* FRP value */
+                        newtail |= ( (uint64_t)(0x02 & 0xFF) << 8 );
+                        /* Sequence number */
+                        newtail |= ( (uint64_t)(0x01 & 0x7) << 16 );
+                        /* Set bit 23 to 1 for DRE internal request */
+                        newtail |= ( (uint64_t)(1 & 0x1) << 23 );
+                        /* Source link ID */
+                        newtail |= ( (uint64_t)(link & 0x7) << 24 );
+                        /* Return token count */
+                        newtail |= ( (uint64_t)(0x01 & 0x1F) << 27 );;
+                        /* CRC (Not checked for sim) */
+                        newtail |= ( (uint64_t)(0x11111111 & 0xFFFFFFFF) << 32 );
 
                     packet[0] = newhead;
                     packet[1] = base_address;
                     packet[2] = stride * 4; // Striding accounts for pixels occupying 4 bytes 
                     packet[3] = pixels;    //Number of elements (pixels) to be retrieved
                     packet[4] = 0; //other;
-                    packet[5] = tail;//UPDATE
+                    packet[5] = newtail;//UPDATE
 
 
                     
@@ -287,10 +301,29 @@ extern int execute_test(	struct hmcsim_t *hmc,
                         newhead |= ( (uint64_t)(base_address & 0x3FFFFFFFF) << 24 );
 
 
+
+
+                      /* RRP value */
+                        newtail |= 0x03;
+                        /* FRP value */
+                        newtail |= ( (uint64_t)(0x02 & 0xFF) << 8 );
+                        /* Sequence number */
+                        newtail |= ( (uint64_t)(0x01 & 0x7) << 16 );
+                        /* Set bit 23 to 1 for DRE internal request */
+                        newtail |= ( (uint64_t)(1 & 0x1) << 23 );
+                        /* Source link ID */
+                        newtail |= ( (uint64_t)(link & 0x7) << 24 );
+                        /* Return token count */
+                        newtail |= ( (uint64_t)(0x01 & 0x1F) << 27 );;
+                        /* CRC (Not checked for sim) */
+                        newtail |= ( (uint64_t)(0x11111111 & 0xFFFFFFFF) << 32 );
+
+
+
                         packet[0] = newhead;
                         packet[1] = dre_id[link];
                         packet[2] = 0;//other;
-                        packet[3] = tail;
+                        packet[3] = newtail;
 
                 }
 
