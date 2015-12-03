@@ -87,15 +87,10 @@ extern int execute_test(	struct hmcsim_t *hmc,
     uint64_t rows_processed = imgsize/(width * 4 * stride);
     long row_req = (((width * 4) / stride) / 8) + (((width * 4) / stride) % 8); //How many packets does it take to transfer one row of strided reads?
     long num_req = rows_processed * row_req * 4; //( stridedsize / (8 * 4)) + (2 * row_req); //We will have an overhead of three  packets: setup, release, and one 32 bytes read in addition to fil  
+    long setup_req = rows_processed * row_req;
+    long setups_sent = 0;
 
 
-
-
-    //FSM States
-    uint8_t isSetup = 1;
-    uint8_t isRelease = 0;
-    uint8_t isFill = 0;
-    uint8_t isRead = 0;
 
     //FSM Control variables
     uint64_t rowbase = addr[0];
@@ -104,28 +99,46 @@ extern int execute_test(	struct hmcsim_t *hmc,
     uint64_t base_address = 0;
     uint8_t pixels = 0;
 
-    //Keeping track of DREs
-    short * waiting = NULL;
-    short * dre_id = NULL; 
-    long * dre_addr = NULL;
 
+    uint8_t SETUP = 0;
+    uint8_t SWAIT = 1; 
+    uint8_t FILL  = 2;
+    uint8_t READ  = 3;
+    uint8_t RELEASE = 4;    
+
+    //short * waiting = NULL;
+    uint8_t * dre_id = NULL; 
+    uint64_t * dre_addr = NULL;
+    uint64_t * seg_addr = NULL; 
+    uint8_t * status = NULL;
+    uint16_t * tags = NULL;
 
 
 
     uint64_t newhead        = 0x00ll;
 
-    uint8_t canIssueFill = 0;
     
 
-    waiting = malloc( sizeof( short ) * hmc->num_links );
-    memset( waiting, -1, sizeof( short ) * hmc->num_links );
+    status = malloc( sizeof( uint8_t ) * hmc->num_links );
+    memset( status, SETUP, sizeof( uint8_t ) * hmc->num_links );
 
-    dre_id = malloc( sizeof( short ) * hmc->num_links );
-    memset( dre_id, -1, sizeof( short ) * hmc->num_links );
+    dre_id = malloc( sizeof( uint8_t ) * hmc->num_links );
+    memset( dre_id, 5, sizeof( uint8_t ) * hmc->num_links );
 
-    dre_addr = malloc( sizeof( long ) * hmc->num_links );
-    memset( dre_addr, -1, sizeof( long ) * hmc->num_links );
+    dre_addr = malloc( sizeof( uint64_t ) * hmc->num_links );
+    memset( dre_addr, 0, sizeof( uint64_t ) * hmc->num_links );
 
+    seg_addr = malloc( sizeof( uint64_t ) * hmc->num_links );
+    memset( seg_addr, 0, sizeof( uint64_t ) * hmc->num_links );
+
+    tags = malloc( sizeof( uint16_t ) * hmc->num_links );
+    memset( tags, 0, sizeof( uint16_t ) * hmc->num_links );
+
+
+    int w;
+    for (w = 0; w < 4; w++){
+        printf("Status for link %d = %d\n", w, status[w]);
+    }
 
 
 	/* ---- */
@@ -195,9 +208,9 @@ extern int execute_test(	struct hmcsim_t *hmc,
 				printf( "...building read request for device : %d\n", cub );                
 
 
-                if(isSetup){
-
-
+                if(status[link] == SETUP && setups_sent < setup_req){
+                    printf("setup\n");                    
+                 //   if (! busy[link]) {
                     hmcsim_build_memrequest( hmc,
                                             cub,
                                             rowbase, //addr[iter],
@@ -231,12 +244,7 @@ extern int execute_test(	struct hmcsim_t *hmc,
                         newhead |= ( (uint64_t)(base_address & 0x3FFFFFFFF) << 24 );
 
 
-                        packet[0] = newhead;
-
-
-
-                   // packet[0] = head;//UPDATE
-//                    packet[1] = tail;
+                    packet[0] = newhead;
                     packet[1] = base_address;
                     packet[2] = stride * 4; // Striding accounts for pixels occupying 4 bytes 
                     packet[3] = pixels;    //Number of elements (pixels) to be retrieved
@@ -244,13 +252,18 @@ extern int execute_test(	struct hmcsim_t *hmc,
                     packet[5] = tail;//UPDATE
 
 
+                    
+                    seg_addr[link] = base_address;
+                    
+
                     fprintf(afile, "Image address: %ld. Row address %ld. Setup msg \n", (long) addr[0], (long) rowbase );
                     fprintf(afile, "Setup seq %d requesting %d pixels from base address %d. \n", (int) setup_packet, (int) pixels, (int) base_address);
+                 
+                
                 }
 
-               else if(isFill){
-                    printf("Processin fill \n");
-                    if (canIssueFill){
+
+               else if(status[link] == FILL){
                         printf("Ready to fill\n");
                         hmcsim_build_memrequest( hmc,
                                                 cub,
@@ -278,11 +291,10 @@ extern int execute_test(	struct hmcsim_t *hmc,
                         packet[1] = dre_id[link];
                         packet[2] = 0;//other;
                         packet[3] = tail;
-                    }
 
                 }
 
-                else if (isRead){
+                else if (status[link] == READ){
                     hmcsim_build_memrequest( hmc,
                                             cub,
                                             dre_addr[link],
@@ -300,7 +312,7 @@ extern int execute_test(	struct hmcsim_t *hmc,
                 }
 
 
-               else if(isRelease){
+               else if(status[link] == RELEASE){
                     hmcsim_build_memrequest( hmc,
                                             cub,
                                             addr[iter],
@@ -320,7 +332,7 @@ extern int execute_test(	struct hmcsim_t *hmc,
                 }
                         
                 else {
-                    printf("Unknown cmd\n");
+                    printf("Unknown cmd %d , SETUP is %d\n", status[link], SETUP);
                    fprintf(afile, "Unidentified state \n" );
 
                 }
@@ -336,9 +348,8 @@ extern int execute_test(	struct hmcsim_t *hmc,
 			}
 #endif
 	
-            if (isFill && !canIssueFill/*(waiting[link] >=  0)*/){
+            if (status[link] == SWAIT){
                 ret = HMC_STALL;
-                fprintf(afile, "Link %d stalled Waiting for setup response, tage %d \n", (int) link, (int) waiting[link] );
             }
             else{
 			    ret = hmcsim_send( hmc, &(packet[0]) );
@@ -351,34 +362,33 @@ extern int execute_test(	struct hmcsim_t *hmc,
 					printf( "SUCCESS : PACKET WAS SUCCESSFULLY SENT\n" );
 					iter++;
                      
-                    if(isSetup){
-                        isSetup=0;
-                        waiting[link] = tag;
-                        canIssueFill = 0;
-                        isFill = 1;                        
-                    }
-
-                    else if(isFill){
-                            isFill = 0;
-                            isRead = 1;
-                    }
-                    else if(isRead){
-                            isRead = 0;
-                            isRelease = 1;
-                    }
-
-                    else if(isRelease){
-                        row += stride;
-                        isSetup = 1;
-                        isRelease = 0;
-                        dre_addr[link] = -1;
-                        dre_id[link] = -1;
+                    if(status[link] == SETUP){
+                        setups_sent++;
+                        status[link] = SWAIT;
+                        tags[link] = tag;
+                        seg_addr[link] = base_address;
                         if (setup_packet == row_req-1){
                             row += stride;
                             setup_packet = 0;
                         }
                         else
                             setup_packet++;
+                    }
+
+                    else if(status[link] == FILL){
+                            status[link] = READ;
+                    }
+
+                    else if(status[link] == READ){
+                            status[link] = RELEASE;
+                    }
+
+                    else if(status[link] == RELEASE){
+                        status[link] = SETUP;//IDLE;
+                        dre_addr[link] = 0;
+                        dre_id[link] = 5;
+                        tags[link] = 0;
+                        seg_addr[link] = 0;   
                     }
                     else
                         fprintf(afile, "Unidentified msg \n" );
@@ -403,7 +413,7 @@ extern int execute_test(	struct hmcsim_t *hmc,
 
 			tag++;
 			if( tag == 2048 ){
-				tag = 0;
+				tag = 1;
 			}	
 
 			link++;
@@ -474,12 +484,10 @@ packet_recv:
 				
                     total_recv++;
 
-                    if (waiting[z] == d_rtn_tag)
-                        waiting[z] = -1;
+                    if (tags[z] == d_rtn_tag)
+                        status[z] = FILL;
                         dre_id[z]  = packet[1];
-                        dre_addr[z] = packet[2];
-                        canIssueFill = 1;    
-                    
+                        dre_addr[z] = packet[2]; 
 				}
 
 				/* 
